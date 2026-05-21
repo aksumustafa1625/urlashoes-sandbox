@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Reseller__c</fullName>
+    <description>Reseller this Opportunity originates from; auto-populated from the reseller email.</description>
+    <label>Reseller</label>
+    <referenceTo>Reseller__c</referenceTo>
+    <relationshipLabel>Opportunities</relationshipLabel>
+    <relationshipName>Opportunities</relationshipName>
+    <required>false</required>
+    <type>Lookup</type>
+</CustomField>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Grants access to the Task rollup fields on Opportunity (Score and Completed Task).</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Task Rollup</label>
+    <fieldPermissions>
+        <field>Opportunity.Completed_Task__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>Opportunity.Score__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+</PermissionSet>

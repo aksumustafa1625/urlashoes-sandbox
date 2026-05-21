@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Reseller_Email__c</fullName>
+    <description>Email of the reseller submitting this Opportunity; matched against Reseller company emails.</description>
+    <externalId>false</externalId>
+    <label>Reseller Email</label>
+    <required>false</required>
+    <type>Email</type>
+    <unique>false</unique>
+</CustomField>
