@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Quote PDF Otomatik Üretim - Mimari</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 11pt;
+    color: #16325c;
+    line-height: 1.5;
+  }
+  h1 {
+    font-size: 22pt;
+    color: #032e61;
+    border-bottom: 3px solid #0070d2;
+    padding-bottom: 6px;
+    margin-bottom: 4px;
+  }
+  h2 {
+    font-size: 15pt;
+    color: #032e61;
+    margin-top: 22px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #d8dde6;
+  }
+  h3 {
+    font-size: 12.5pt;
+    color: #0070d2;
+    margin-top: 16px;
+  }
+  .subtitle {
+    color: #54698d;
+    font-size: 10pt;
+    margin-top: 0;
+  }
+  .callout {
+    background: #fef1e7;
+    border-left: 4px solid #ff9a3c;
+    padding: 10px 14px;
+    margin: 14px 0;
+    font-size: 10.5pt;
+  }
+  .callout strong { color: #b34800; }
+  pre, code {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 9.5pt;
+  }
+  pre {
+    background: #f3f3f3;
+    border: 1px solid #d8dde6;
+    border-radius: 4px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    line-height: 1.4;
+  }
+  code {
+    background: #ecebea;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 10pt;
+  }
+  th {
+    background: #f3f3f3;
+    text-align: left;
+    padding: 6px 8px;
+    border: 1px solid #d8dde6;
+    font-weight: 600;
+  }
+  td {
+    padding: 6px 8px;
+    border: 1px solid #d8dde6;
+    vertical-align: top;
+  }
+  .step {
+    background: #ecf5fe;
+    border-left: 4px solid #0070d2;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .step .step-num {
+    display: inline-block;
+    background: #0070d2;
+    color: #fff;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    text-align: center;
+    line-height: 22px;
+    font-weight: 700;
+    margin-right: 8px;
+    font-size: 10pt;
+  }
+  .file-ref {
+    font-size: 9pt;
+    color: #54698d;
+    font-style: italic;
+  }
+  .flow-box {
+    border: 1px solid #d8dde6;
+    border-radius: 4px;
+    padding: 10px;
+    background: #fafafa;
+    font-family: Consolas, monospace;
+    font-size: 9.5pt;
+    white-space: pre;
+    line-height: 1.45;
+  }
+  ul { margin: 6px 0 6px 22px; }
+  li { margin: 3px 0; }
+  .total-latency {
+    background: #effbe6;
+    border: 1px solid #4bca81;
+    border-radius: 4px;
+    padding: 10px 14px;
+    text-align: center;
+    font-weight: 600;
+    color: #027e46;
+  }
+  .key-decision {
+    background: #fffbe6;
+    border-left: 4px solid #fcc419;
+    padding: 10px 14px;
+    margin: 10px 0;
+  }
+  .pill {
+    display: inline-block;
+    background: #0070d2;
+    color: #fff;
+    border-radius: 12px;
+    padding: 2px 10px;
+    font-size: 9pt;
+    margin-right: 4px;
+  }
+  .pill.warn { background: #b34800; }
+  .pill.good { background: #027e46; }
+  .footer {
+    margin-top: 32px;
+    padding-top: 12px;
+    border-top: 1px solid #d8dde6;
+    color: #54698d;
+    font-size: 9pt;
+    text-align: center;
+  }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<h1>Quote PDF Otomatik Üretim &mdash; Mimari</h1>
+<p class="subtitle">URLA SHOES &mdash; Salesforce Sandbox &mdash; Takım Sunum Dokümanı</p>
+
+<div class="callout">
+  <strong>Kritik tasarım notu:</strong> Bu çözümde bilinçli olarak Apex trigger <strong>kullanılmıyor</strong>. Salesforce'un yerli sunucu tarafı PDF üretim aracı Visualforce'tur (<code>PageReference.getContentAsPDF()</code>) ve proje gereği kapsam dışıdır. Bu sebeple PDF üretimi <strong>tarayıcıda</strong>, jsPDF kütüphanesi ile yapılır; otomatikleştirme de record trigger yerine bir polling mekanizmasıyla sağlanır.
+</div>
+
+<h2>1. Bileşenler</h2>
+<table>
+  <tr><th>Katman</th><th>Bileşen</th><th>Görev</th></tr>
+  <tr><td>Tarayıcı</td><td>LWC <code>quotePdfGenerator</code></td><td>Polling ile kayıt değişimini algılar, jsPDF ile PDF üretir, Apex'e yükleme isteği gönderir.</td></tr>
+  <tr><td>Static Resource</td><td><code>jsPDF</code> (UMD min, ~365&nbsp;KB)</td><td>Tarayıcı tarafında çalışan PDF üretim kütüphanesi.</td></tr>
+  <tr><td>Apex Service</td><td><code>QuotePdfService</code></td><td>4 metot: change signature, taze veri çekimi, versiyon numarası, attachment yükleme.</td></tr>
+  <tr><td>SObject</td><td><code>Quote</code>, <code>QuoteLineItem</code>, <code>Attachment</code></td><td>Standart objeler; üretilen PDF'ler Notes &amp; Attachments'a düşer.</td></tr>
+</table>
+
+<h2>2. Uçtan Uca Akış</h2>
+
+<div class="step">
+  <span class="step-num">1</span><strong>Kullanıcı Quote sayfasını açar</strong>
+  <ul>
+    <li>LWC sayfaya bağlanır &rarr; <code>connectedCallback()</code> çalışır</li>
+    <li><code>loadScript(jsPdfResource)</code> kütüphaneyi indirir/cache'den alır</li>
+    <li>İlk <code>pollOnce()</code> bir <em>baseline</em> (taban) signature kaydeder</li>
+    <li><code>setInterval(pollOnce, 3000)</code> polling döngüsünü başlatır</li>
+  </ul>
+  <span class="file-ref">force-app/main/default/lwc/quotePdfGenerator/quotePdfGenerator.js (connectedCallback)</span>
+</div>
+
+<div class="step">
+  <span class="step-num">2</span><strong>Kullanıcı "Add Products" ile ürün ekler ve kaydeder</strong>
+  <ul>
+    <li>Salesforce <code>QuoteLineItem</code> kayıtlarını insert eder</li>
+    <li>Quote rollup alanları sunucu tarafında güncellenir: <code>Subtotal</code>, <code>Discount</code>, <code>Tax</code>, <code>TotalPrice</code>, <code>GrandTotal</code></li>
+    <li><code>Quote.LastModifiedDate</code> ilerler</li>
+    <li>Tarayıcı bu noktada henüz hiçbir şey bilmez</li>
+  </ul>
+</div>
+
+<div class="step">
+  <span class="step-num">3</span><strong>Polling değişimi algılar (yaklaşık 3 sn içinde)</strong>
+<pre>async pollOnce() {
+    const signature = await getQuoteChangeSignature({ quoteId: this.recordId });
+    if (this.previousSignature && this.previousSignature !== signature) {
+        this.scheduleRegenerate();   // &larr; TETİKLEME NOKTASI
+    }
+    this.previousSignature = signature;
+}</pre>
+  <p>Apex metodu 7 parçadan oluşan sıkıştırılmış bir signature (parmak izi) string'i döner:</p>
+<pre>@AuraEnabled
+public static String getQuoteChangeSignature(Id quoteId) {
+    Quote q = [SELECT LastModifiedDate, Subtotal, Discount, Tax,
+                      TotalPrice, GrandTotal FROM Quote WHERE Id=:quoteId];
+    Integer lineCount = [SELECT COUNT() FROM QuoteLineItem WHERE QuoteId=:quoteId];
+    return q.LastModifiedDate.getTime() + '|' + q.Subtotal + '|' + q.Discount
+         + '|' + q.Tax + '|' + q.TotalPrice + '|' + q.GrandTotal
+         + '|' + lineCount;
+}</pre>
+  <span class="file-ref">QuotePdfService.cls &mdash; getQuoteChangeSignature</span>
+</div>
+
+<div class="step">
+  <span class="step-num">4</span><strong>Debounce (1.5 saniye bekleme)</strong>
+<pre>scheduleRegenerate() {
+    if (this.regenerateTimeoutId) clearTimeout(this.regenerateTimeoutId);
+    this.regenerateTimeoutId = setTimeout(async () => {
+        await this.handleGenerate();
+    }, 1500);
+}</pre>
+  <p><strong>Neden debounce?</strong> Add Products wizard'ı birbiri ardına birden fazla DML üretebilir. Debounce, <em>son</em> save'den 1.5&nbsp;sn sonrasına kadar bekler. Böylece 5 ürün eklediğinde 5 PDF yerine <strong>tek</strong> PDF üretilir.</p>
+</div>
+
+<div class="step">
+  <span class="step-num">5</span><strong>Asıl üretim &mdash; <code>handleGenerate()</code></strong>
+<pre>async handleGenerate() {
+    this.isGenerating = true;
+    // 1. En taze veriyi çek (Apex'te cacheable=false olduğu için cache'siz)
+    const freshData = await getQuoteData({ quoteId: this.recordId });
+    // 2. Bir sonraki versiyon numarasını al
+    const version = await getNextVersionNumber({ quoteId: this.recordId });
+    // 3. PDF'i tarayıcıda jsPDF ile üret
+    const base64 = this.buildPdfBase64(freshData, version);
+    // 4. Apex'e gönder; Attachment olarak kaydedilir
+    const fileName = `${freshData.quote.QuoteNumber}_v${version}.pdf`;
+    await uploadPdf({ quoteId: this.recordId, base64Body: base64, fileName });
+    // 5. Kullanıcıya toast göster
+    this.dispatchEvent(new ShowToastEvent({ title:'PDF generated', ... }));
+}</pre>
+</div>
+
+<div class="step">
+  <span class="step-num">6</span><strong>PDF render (jsPDF, tarayıcı tarafında)</strong>
+  <p><code>buildPdfBase64(data, version)</code> tasarım şablonuna uygun invoice yerleşimini çizer:</p>
+  <ul>
+    <li>Sol üst: kalın <strong>INVOICE</strong> başlığı (46&nbsp;pt)</li>
+    <li>Sağ üst: <strong>URLA SHOES CORP.</strong> + adres + email + telefon</li>
+    <li>Meta satırı: Invoice #, Due Date, Invoice date, Prepared by</li>
+    <li>Pembe banner: <strong>CUSTOMER DETAILS</strong> + Name / Address / Phone / Email</li>
+    <li>Pembe başlıklı line item tablosu: <em>DESCRIPTION / QTY / PRICE / TOTAL</em>. Description boşsa <code>Product2.Name</code> kullanılır.</li>
+    <li>Sol alt: Terms &amp; Conditions paragrafı</li>
+    <li>Sağ alt: SUBTOTAL / DISCOUNT / TAXES / GRAND TOTAL</li>
+    <li>Sayfa altı: Signature / Name / Date satırları</li>
+  </ul>
+  <p>Çıktı: PDF dokümanı &rarr; base64 string olarak Apex'e teslim edilir.</p>
+</div>
+
+<div class="step">
+  <span class="step-num">7</span><strong>Apex Attachment kaydı oluşturur</strong>
+<pre>@AuraEnabled
+public static Id uploadPdf(Id quoteId, String base64Body, String fileName) {
+    Attachment a = new Attachment(
+        ParentId    = quoteId,
+        Name        = fileName,                    // örn. "00000006_v2.pdf"
+        Body        = EncodingUtil.base64Decode(base64Body),
+        ContentType = 'application/pdf'
+    );
+    insert a;
+    return a.Id;
+}</pre>
+  <p>Yeni PDF <strong>Notes &amp; Attachments</strong> related list'inde anında belirir.</p>
+</div>
+
+<div class="step">
+  <span class="step-num">8</span><strong>Bir sonraki polling cycle baseline'ı günceller</strong>
+  <p>Üretim tamamlandıktan sonraki <code>pollOnce</code>, artık güncel olan signature'ı görüp yeni baseline olarak saklar. Böylece <strong>bir save tam olarak bir PDF üretir</strong> &mdash; sonsuz döngü oluşmaz.</p>
+</div>
+
+<h2>3. Versiyonlama Mantığı</h2>
+<pre>@AuraEnabled
+public static Integer getNextVersionNumber(Id quoteId) {
+    Integer maxVersion = 0;
+    for (Attachment a : [SELECT Name FROM Attachment
+                         WHERE ParentId=:quoteId AND ContentType='application/pdf']) {
+        Integer v = parseVersion(a.Name);   // regex: _v(\d+)\.pdf
+        if (v > maxVersion) maxVersion = v;
+    }
+    return maxVersion + 1;
+}</pre>
+<p>Quote'a bağlı mevcut tüm PDF attachment'lar arasında en yüksek <code>_vN.pdf</code> suffix'ini bulup <code>N + 1</code> döner. İlk save'de v1, ikincide v2, sonrası benzeri.</p>
+
+<h2>4. Latency (Gecikme) Bütçesi</h2>
+<table>
+  <tr><th>Aşama</th><th>Süre</th></tr>
+  <tr><td>Kullanıcı Save'e basar &rarr; DB committed</td><td>~0.5 sn</td></tr>
+  <tr><td>Bir sonraki polling cycle (en kötü ihtimal)</td><td>3 sn</td></tr>
+  <tr><td>Debounce penceresi</td><td>1.5 sn</td></tr>
+  <tr><td>PDF render + upload</td><td>~0.3 sn</td></tr>
+</table>
+<div class="total-latency">En kötü senaryoda toplam ≈ 5 saniye; Save anından PDF'in Notes &amp; Attachments'a düşmesine kadar</div>
+
+<div class="page-break"></div>
+
+<h2>5. Temel Mimari Kararlar</h2>
+
+<div class="key-decision">
+  <strong>5.1 &mdash; Neden Apex trigger değil de polling?</strong>
+  <p>Visualforce kapsam dışı bırakılınca sunucu tarafı PDF render imkânsız hale geliyor. Üretim mecburen tarayıcıda (jsPDF ile) yapılmak zorunda; bu da otomasyonun LWC içinde yaşaması anlamına geliyor. İlk denemede <code>getRecord</code> (Lightning Data Service) kullanıldı, ancak QuoteLineItem rollup'larında tutarsız davrandı. Apex signature'ını 3 saniyede bir polling yapmak hem en güvenilir hem de tüm değişiklik tiplerini yakalayan yöntem oldu.</p>
+</div>
+
+<div class="key-decision">
+  <strong>5.2 &mdash; Neden <code>getQuoteData</code> <code>cacheable=false</code>?</strong>
+  <p>İlk versiyonda <code>cacheable=true</code> idi. LWC save'den hemen sonra veri çektiği için cache eski (boş) veriyi dönüyordu ve PDF line item'ları görüntülemiyordu. Cache'i kaldırınca her üretimde taze veri çekilmesi sağlandı &mdash; geliştirme sırasında karşılaşılan ana hatanın kök nedeni buydu.</p>
+</div>
+
+<div class="key-decision">
+  <strong>5.3 &mdash; Neden 3 sn polling, neden 1.5 sn debounce?</strong>
+  <p>3 saniye kullanıcı için neredeyse anlık his veriyor; dakikada ~20 Apex çağrısı ise sistemde hissedilmeyecek kadar küçük yük. 1.5 sn'lik debounce ise wizard kaynaklı DML patlamalarını (Add Products'ın 5 line item eklemesi gibi) tek PDF'e indirgiyor.</p>
+</div>
+
+<div class="key-decision">
+  <strong>5.4 &mdash; Neden Files yerine Notes &amp; Attachments?</strong>
+  <p>Orijinal gereksinim açıkça "Notes &amp; Attachments" diye belirtmişti. Klasik <code>Attachment</code> sObject'i tam olarak buraya düşüyor ve şartı birebir karşılıyor. <code>ContentDocument</code> (Files) daha modern bir alternatif olur; ileride takım isterse tek satırlık bir değişiklikle geçilebilir.</p>
+</div>
+
+<h2>6. Hata Senaryoları</h2>
+<table>
+  <tr><th>Senaryo</th><th>Sonuç</th></tr>
+  <tr><td>jsPDF static resource yüklenemezse</td><td>Card'da kırmızı hata mesajı: <em>"jsPDF library failed to load"</em>. Polling hiç başlamaz.</td></tr>
+  <tr><td><code>getQuoteData</code> hata fırlatırsa</td><td>Toast: <em>"PDF generation failed"</em> + hata mesajı; kullanıcı "Regenerate Now" butonuyla tekrar deneyebilir.</td></tr>
+  <tr><td><code>uploadPdf</code> FLS / sharing nedeniyle engellenirse</td><td>Toast Apex hatasını gösterir; koşullar değişirse bir sonraki polling cycle'da yeniden denenir.</td></tr>
+  <tr><td>Aynı anda iki üretim tetiklenirse</td><td><code>isGenerating</code> guard'ı erken return ettirir; yalnızca ilk üretim tamamlanır.</td></tr>
+  <tr><td>Polling sırasında ağ kopukluğu</td><td>Sessiz hata &mdash; 3 saniye sonraki poll tekrar dener.</td></tr>
+  <tr><td>Kullanıcı debounce sırasında 3 save daha yaparsa</td><td>Her save timer'ı sıfırlar; yalnızca son save'den 1.5 sn sonra tek bir PDF üretilir.</td></tr>
+</table>
+
+<h2>7. Dosya Yapısı</h2>
+<div class="flow-box">force-app/main/default/
+&#9500;&#9472;&#9472; classes/
+&#9474;   &#9500;&#9472;&#9472; QuotePdfService.cls               &#9587;&#9472; 4 Apex metodu
+&#9474;   &#9492;&#9472;&#9472; QuotePdfServiceTest.cls           &#9587;&#9472; 6 unit test, %100 coverage
+&#9500;&#9472;&#9472; lwc/
+&#9474;   &#9492;&#9472;&#9472; quotePdfGenerator/
+&#9474;       &#9500;&#9472;&#9472; quotePdfGenerator.js          &#9587;&#9472; ana mantık (polling, render, upload)
+&#9474;       &#9500;&#9472;&#9472; quotePdfGenerator.html        &#9587;&#9472; UI template
+&#9474;       &#9500;&#9472;&#9472; quotePdfGenerator.css         &#9587;&#9472; stil
+&#9474;       &#9492;&#9472;&#9472; quotePdfGenerator.js-meta.xml &#9587;&#9472; Quote record page target
+&#9500;&#9472;&#9472; staticresources/
+&#9474;   &#9500;&#9472;&#9472; jsPDF.js                          &#9587;&#9472; jsPDF 2.5.1 UMD min (365 KB)
+&#9474;   &#9492;&#9472;&#9472; jsPDF.resource-meta.xml
+&#9492;&#9472;&#9472; settings/
+    &#9492;&#9472;&#9472; Quote.settings-meta.xml           &#9587;&#9472; Quote objesini aktive eder
+</div>
+
+<h2>8. Takım İçin 3 Anahtar Mesaj</h2>
+<ol>
+  <li><strong>"Visualforce kullanmadan otomatik PDF üretimi tarayıcıya taşınır."</strong> &mdash; modern, client-side, sunucu tarafı render bağımlılığı yok.</li>
+  <li><strong>"Tetikleyici bir Apex trigger değil; 3 saniyelik polling + 1.5 saniyelik debounce."</strong> &mdash; basit, öngörülebilir ve farklı değişiklik tiplerini güvenilir biçimde yakalar.</li>
+  <li><strong>"<code>cacheable=false</code> + her seferinde taze veri çekme = doğru PDF."</strong> &mdash; geliştirme sırasındaki boş PDF hatasının kök nedeni cacheable Apex idi; çözüm bilinçli ve takımla paylaşılmaya değer.</li>
+</ol>
+
+<div class="footer">
+  Takım inceleme için hazırlanmıştır &mdash; URLA SHOES Salesforce Sandbox
+</div>
+
+</body>
+</html>

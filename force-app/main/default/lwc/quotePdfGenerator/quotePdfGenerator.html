@@ -1,0 +1,34 @@
+<template>
+    <lightning-card title="Invoice PDF (Auto)" icon-name="standard:quotes">
+        <!-- Manual override - normally not needed because saves auto-trigger -->
+        <lightning-button slot="actions" label="Regenerate Now" variant="brand-outline" onclick={handleGenerate} disabled={isGenerating}></lightning-button>
+
+        <div class="slds-p-around_medium">
+
+            <!-- Spinner while generating -->
+            <template lwc:if={isGenerating}>
+                <div class="slds-is-relative slds-p-vertical_large">
+                    <lightning-spinner alternative-text="Generating PDF..." size="small"></lightning-spinner>
+                </div>
+                <p class="slds-text-align_center slds-text-color_weak">Generating PDF...</p>
+            </template>
+
+            <!-- Success state -->
+            <template lwc:if={lastFileName}>
+                <p class="slds-text-color_success slds-m-bottom_small">
+                    Latest version <strong>{lastFileName}</strong> attached to Notes &amp; Attachments. Saving the Quote again will create the next version automatically.
+                </p>
+            </template>
+
+            <!-- Idle helper text -->
+            <template lwc:if={isIdle}>
+                <p class="slds-text-color_weak">Watching this Quote. Add products or update line items and click Save - the PDF will be generated automatically.</p>
+            </template>
+
+            <!-- Error state -->
+            <template lwc:if={error}>
+                <p class="slds-text-color_error slds-m-top_small">Error: {error}</p>
+            </template>
+        </div>
+    </lightning-card>
+</template>

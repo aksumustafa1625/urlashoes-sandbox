@@ -1,0 +1,41 @@
+/* KPI card container */
+.kpi-card {
+    background: #f3f3f3;
+    border-radius: 0.25rem;
+    padding: 1rem 0.75rem;
+    text-align: center;
+}
+
+/* KPI label - small uppercase caption above the number */
+.kpi-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #706e6b;
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.04em;
+}
+
+/* KPI value - the prominent number */
+.kpi-value {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #16325c;
+    line-height: 1;
+}
+
+/* Progress bar track */
+.progress-track {
+    width: 100%;
+    height: 8px;
+    background: #ecebea;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 0.25rem;
+}
+
+/* Progress bar fill */
+.progress-fill {
+    height: 100%;
+    background: #04844b;
+    transition: width 0.4s ease;
+}

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quote PDF Auto-Generation - Architecture</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 11pt;
+    color: #16325c;
+    line-height: 1.5;
+  }
+  h1 {
+    font-size: 22pt;
+    color: #032e61;
+    border-bottom: 3px solid #0070d2;
+    padding-bottom: 6px;
+    margin-bottom: 4px;
+  }
+  h2 {
+    font-size: 15pt;
+    color: #032e61;
+    margin-top: 22px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #d8dde6;
+  }
+  h3 {
+    font-size: 12.5pt;
+    color: #0070d2;
+    margin-top: 16px;
+  }
+  .subtitle {
+    color: #54698d;
+    font-size: 10pt;
+    margin-top: 0;
+  }
+  .callout {
+    background: #fef1e7;
+    border-left: 4px solid #ff9a3c;
+    padding: 10px 14px;
+    margin: 14px 0;
+    font-size: 10.5pt;
+  }
+  .callout strong { color: #b34800; }
+  pre, code {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 9.5pt;
+  }
+  pre {
+    background: #f3f3f3;
+    border: 1px solid #d8dde6;
+    border-radius: 4px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    line-height: 1.4;
+  }
+  code {
+    background: #ecebea;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 10pt;
+  }
+  th {
+    background: #f3f3f3;
+    text-align: left;
+    padding: 6px 8px;
+    border: 1px solid #d8dde6;
+    font-weight: 600;
+  }
+  td {
+    padding: 6px 8px;
+    border: 1px solid #d8dde6;
+    vertical-align: top;
+  }
+  .step {
+    background: #ecf5fe;
+    border-left: 4px solid #0070d2;
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .step .step-num {
+    display: inline-block;
+    background: #0070d2;
+    color: #fff;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    text-align: center;
+    line-height: 22px;
+    font-weight: 700;
+    margin-right: 8px;
+    font-size: 10pt;
+  }
+  .file-ref {
+    font-size: 9pt;
+    color: #54698d;
+    font-style: italic;
+  }
+  .flow-box {
+    border: 1px solid #d8dde6;
+    border-radius: 4px;
+    padding: 10px;
+    background: #fafafa;
+    font-family: Consolas, monospace;
+    font-size: 9.5pt;
+    white-space: pre;
+    line-height: 1.45;
+  }
+  ul { margin: 6px 0 6px 22px; }
+  li { margin: 3px 0; }
+  .total-latency {
+    background: #effbe6;
+    border: 1px solid #4bca81;
+    border-radius: 4px;
+    padding: 10px 14px;
+    text-align: center;
+    font-weight: 600;
+    color: #027e46;
+  }
+  .key-decision {
+    background: #fffbe6;
+    border-left: 4px solid #fcc419;
+    padding: 10px 14px;
+    margin: 10px 0;
+  }
+  .pill {
+    display: inline-block;
+    background: #0070d2;
+    color: #fff;
+    border-radius: 12px;
+    padding: 2px 10px;
+    font-size: 9pt;
+    margin-right: 4px;
+  }
+  .pill.warn { background: #b34800; }
+  .pill.good { background: #027e46; }
+  .footer {
+    margin-top: 32px;
+    padding-top: 12px;
+    border-top: 1px solid #d8dde6;
+    color: #54698d;
+    font-size: 9pt;
+    text-align: center;
+  }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<h1>Quote PDF Auto-Generation Architecture</h1>
+<p class="subtitle">URLA SHOES &mdash; Salesforce Sandbox &mdash; Team Presentation Document</p>
+
+<div class="callout">
+  <strong>Critical design note:</strong> This solution intentionally does <strong>NOT</strong> use an Apex trigger. Salesforce's native server-side PDF generation requires Visualforce (<code>PageReference.getContentAsPDF()</code>), which was explicitly out of scope. PDF rendering therefore runs <strong>client-side</strong> in an LWC using the jsPDF library, with automation driven by a polling mechanism instead of a record trigger.
+</div>
+
+<h2>1. Components</h2>
+<table>
+  <tr><th>Layer</th><th>Component</th><th>Purpose</th></tr>
+  <tr><td>Browser</td><td>LWC <code>quotePdfGenerator</code></td><td>Detects record changes via polling, renders PDF via jsPDF, calls Apex to upload.</td></tr>
+  <tr><td>Static Resource</td><td><code>jsPDF</code> (UMD min, ~365&nbsp;KB)</td><td>Client-side PDF library loaded into the LWC.</td></tr>
+  <tr><td>Apex Service</td><td><code>QuotePdfService</code></td><td>4 methods: change signature, fresh data fetch, version number, upload attachment.</td></tr>
+  <tr><td>SObject</td><td><code>Quote</code>, <code>QuoteLineItem</code>, <code>Attachment</code></td><td>Standard objects; PDFs land in Notes &amp; Attachments.</td></tr>
+</table>
+
+<h2>2. End-to-End Flow</h2>
+
+<div class="step">
+  <span class="step-num">1</span><strong>User opens the Quote record page</strong>
+  <ul>
+    <li>LWC mounts &rarr; <code>connectedCallback()</code> runs</li>
+    <li><code>loadScript(jsPdfResource)</code> downloads/caches the library</li>
+    <li>First <code>pollOnce()</code> stores a <em>baseline</em> change signature</li>
+    <li><code>setInterval(pollOnce, 3000)</code> starts the polling loop</li>
+  </ul>
+  <span class="file-ref">force-app/main/default/lwc/quotePdfGenerator/quotePdfGenerator.js (connectedCallback)</span>
+</div>
+
+<div class="step">
+  <span class="step-num">2</span><strong>User clicks "Add Products" and saves line items</strong>
+  <ul>
+    <li>Salesforce inserts <code>QuoteLineItem</code> records</li>
+    <li>Quote rollup fields update server-side: <code>Subtotal</code>, <code>Discount</code>, <code>Tax</code>, <code>TotalPrice</code>, <code>GrandTotal</code></li>
+    <li><code>Quote.LastModifiedDate</code> advances</li>
+    <li>The browser knows nothing yet</li>
+  </ul>
+</div>
+
+<div class="step">
+  <span class="step-num">3</span><strong>Polling detects the change (within ~3 s)</strong>
+<pre>async pollOnce() {
+    const signature = await getQuoteChangeSignature({ quoteId: this.recordId });
+    if (this.previousSignature && this.previousSignature !== signature) {
+        this.scheduleRegenerate();   // &larr; TRIGGER POINT
+    }
+    this.previousSignature = signature;
+}</pre>
+  <p>The Apex method returns a compact pipe-delimited string composed of 7 parts:</p>
+<pre>@AuraEnabled
+public static String getQuoteChangeSignature(Id quoteId) {
+    Quote q = [SELECT LastModifiedDate, Subtotal, Discount, Tax,
+                      TotalPrice, GrandTotal FROM Quote WHERE Id=:quoteId];
+    Integer lineCount = [SELECT COUNT() FROM QuoteLineItem WHERE QuoteId=:quoteId];
+    return q.LastModifiedDate.getTime() + '|' + q.Subtotal + '|' + q.Discount
+         + '|' + q.Tax + '|' + q.TotalPrice + '|' + q.GrandTotal
+         + '|' + lineCount;
+}</pre>
+  <span class="file-ref">QuotePdfService.cls &mdash; getQuoteChangeSignature</span>
+</div>
+
+<div class="step">
+  <span class="step-num">4</span><strong>Debounce (1.5 s wait)</strong>
+<pre>scheduleRegenerate() {
+    if (this.regenerateTimeoutId) clearTimeout(this.regenerateTimeoutId);
+    this.regenerateTimeoutId = setTimeout(async () => {
+        await this.handleGenerate();
+    }, 1500);
+}</pre>
+  <p><strong>Why debounce?</strong> The Add Products wizard can produce several DMLs in quick succession. The debounce waits until 1.5&nbsp;s after the <em>last</em> save, so adding 5 products produces <strong>one</strong> PDF rather than five.</p>
+</div>
+
+<div class="step">
+  <span class="step-num">5</span><strong>Actual generation &mdash; <code>handleGenerate()</code></strong>
+<pre>async handleGenerate() {
+    this.isGenerating = true;
+    // 1. Pull the freshest data (cacheable=false in Apex)
+    const freshData = await getQuoteData({ quoteId: this.recordId });
+    // 2. Compute the next version number
+    const version = await getNextVersionNumber({ quoteId: this.recordId });
+    // 3. Render the PDF in the browser via jsPDF
+    const base64 = this.buildPdfBase64(freshData, version);
+    // 4. Hand off to Apex which inserts the Attachment
+    const fileName = `${freshData.quote.QuoteNumber}_v${version}.pdf`;
+    await uploadPdf({ quoteId: this.recordId, base64Body: base64, fileName });
+    // 5. Toast the user
+    this.dispatchEvent(new ShowToastEvent({ title:'PDF generated', ... }));
+}</pre>
+</div>
+
+<div class="step">
+  <span class="step-num">6</span><strong>PDF rendering with jsPDF (in the browser)</strong>
+  <p><code>buildPdfBase64(data, version)</code> draws the invoice layout that matches the design template:</p>
+  <ul>
+    <li>Top left: bold <strong>INVOICE</strong> title (46&nbsp;pt)</li>
+    <li>Top right: <strong>URLA SHOES CORP.</strong> + address + email + phone</li>
+    <li>Meta row: Invoice #, Due Date, Invoice date, Prepared by</li>
+    <li>Pink banner: <strong>CUSTOMER DETAILS</strong> + Name / Address / Phone / Email</li>
+    <li>Line item table with pink header: <em>DESCRIPTION / QTY / PRICE / TOTAL</em>. Description falls back to <code>Product2.Name</code> when blank.</li>
+    <li>Bottom left: Terms &amp; Conditions paragraph</li>
+    <li>Bottom right: SUBTOTAL / DISCOUNT / TAXES / GRAND TOTAL</li>
+    <li>Page footer: Signature / Name / Date lines</li>
+  </ul>
+  <p>Output: PDF document &rarr; base64 string handed to Apex.</p>
+</div>
+
+<div class="step">
+  <span class="step-num">7</span><strong>Apex inserts the Attachment</strong>
+<pre>@AuraEnabled
+public static Id uploadPdf(Id quoteId, String base64Body, String fileName) {
+    Attachment a = new Attachment(
+        ParentId    = quoteId,
+        Name        = fileName,                    // e.g. "00000006_v2.pdf"
+        Body        = EncodingUtil.base64Decode(base64Body),
+        ContentType = 'application/pdf'
+    );
+    insert a;
+    return a.Id;
+}</pre>
+  <p>The new PDF appears in the <strong>Notes &amp; Attachments</strong> related list immediately.</p>
+</div>
+
+<div class="step">
+  <span class="step-num">8</span><strong>The next polling cycle updates the baseline</strong>
+  <p>After the generation completes, the next <code>pollOnce</code> sees the now-current signature and stores it as the new baseline. This means <strong>one save produces exactly one PDF</strong> &mdash; no infinite loop.</p>
+</div>
+
+<h2>3. Versioning Logic</h2>
+<pre>@AuraEnabled
+public static Integer getNextVersionNumber(Id quoteId) {
+    Integer maxVersion = 0;
+    for (Attachment a : [SELECT Name FROM Attachment
+                         WHERE ParentId=:quoteId AND ContentType='application/pdf']) {
+        Integer v = parseVersion(a.Name);   // regex: _v(\d+)\.pdf
+        if (v > maxVersion) maxVersion = v;
+    }
+    return maxVersion + 1;
+}</pre>
+<p>Scan all existing PDF attachments for the highest <code>_vN.pdf</code> suffix and return <code>N + 1</code>. First save &rarr; v1, second &rarr; v2, and so on.</p>
+
+<h2>4. Latency Budget</h2>
+<table>
+  <tr><th>Stage</th><th>Duration</th></tr>
+  <tr><td>User clicks Save &rarr; DB committed</td><td>~0.5 s</td></tr>
+  <tr><td>Next polling cycle (worst case)</td><td>3 s</td></tr>
+  <tr><td>Debounce window</td><td>1.5 s</td></tr>
+  <tr><td>PDF render + upload</td><td>~0.3 s</td></tr>
+</table>
+<div class="total-latency">Worst-case total ≈ 5 seconds from Save to PDF in Notes &amp; Attachments</div>
+
+<div class="page-break"></div>
+
+<h2>5. Key Architectural Decisions</h2>
+
+<div class="key-decision">
+  <strong>5.1 &mdash; Why polling instead of an Apex trigger?</strong>
+  <p>With Visualforce off the table, server-side PDF rendering is not possible. Generation has to happen in the browser via jsPDF, which means the automation lives inside an LWC. <code>getRecord</code> (Lightning Data Service) was tried first but does not consistently fire on QuoteLineItem rollup updates. Polling the Apex signature every 3 s is the most reliable detection mechanism.</p>
+</div>
+
+<div class="key-decision">
+  <strong>5.2 &mdash; Why <code>cacheable=false</code> on <code>getQuoteData</code>?</strong>
+  <p>Earlier versions had <code>cacheable=true</code>. Because the LWC fetches data right after a save, the cache returned stale (empty) data and the PDF showed no line items. Removing the cache forces every generation to hit fresh data &mdash; this was the root cause of the empty-PDF issue we hit during development.</p>
+</div>
+
+<div class="key-decision">
+  <strong>5.3 &mdash; Why 3 s polling, why 1.5 s debounce?</strong>
+  <p>3&nbsp;seconds is short enough to feel near-instant for a user; long enough that the per-minute Apex calls (~20) are negligible. The 1.5&nbsp;s debounce collapses wizard-driven DML bursts (e.g. Add Products inserting 5 line items) into a single PDF instead of five.</p>
+</div>
+
+<div class="key-decision">
+  <strong>5.4 &mdash; Why Notes &amp; Attachments rather than Files?</strong>
+  <p>The original requirement explicitly named "Notes &amp; Attachments". The classic <code>Attachment</code> sObject lands there and matches the requirement verbatim. <code>ContentDocument</code> (Files) would be the more modern choice and is a one-line swap if the team prefers it later.</p>
+</div>
+
+<h2>6. Failure Modes</h2>
+<table>
+  <tr><th>Scenario</th><th>Outcome</th></tr>
+  <tr><td>jsPDF static resource fails to load</td><td>Card shows red error: <em>"jsPDF library failed to load"</em>. Polling never starts.</td></tr>
+  <tr><td><code>getQuoteData</code> throws</td><td>Toast: <em>"PDF generation failed"</em> with the error message; user can click "Regenerate Now".</td></tr>
+  <tr><td><code>uploadPdf</code> blocked by FLS or sharing</td><td>Toast with the Apex error; the PDF is regenerated next polling cycle if conditions change.</td></tr>
+  <tr><td>Two generations attempted concurrently</td><td><code>isGenerating</code> guard returns early; only the first completes.</td></tr>
+  <tr><td>Network interruption during polling</td><td>Silent failure &mdash; the next 3-second poll retries automatically.</td></tr>
+  <tr><td>User makes 3 saves during the debounce</td><td>Each save resets the 1.5 s timer; only one PDF is produced after the last save.</td></tr>
+</table>
+
+<h2>7. File Layout</h2>
+<div class="flow-box">force-app/main/default/
+&#9500;&#9472;&#9472; classes/
+&#9474;   &#9500;&#9472;&#9472; QuotePdfService.cls               &#9587;&#9472; 4 Apex methods
+&#9474;   &#9492;&#9472;&#9472; QuotePdfServiceTest.cls           &#9587;&#9472; 6 unit tests, 100% coverage
+&#9500;&#9472;&#9472; lwc/
+&#9474;   &#9492;&#9472;&#9472; quotePdfGenerator/
+&#9474;       &#9500;&#9472;&#9472; quotePdfGenerator.js          &#9587;&#9472; main logic (polling, render, upload)
+&#9474;       &#9500;&#9472;&#9472; quotePdfGenerator.html        &#9587;&#9472; UI template
+&#9474;       &#9500;&#9472;&#9472; quotePdfGenerator.css         &#9587;&#9472; styling
+&#9474;       &#9492;&#9472;&#9472; quotePdfGenerator.js-meta.xml &#9587;&#9472; Quote record page target
+&#9500;&#9472;&#9472; staticresources/
+&#9474;   &#9500;&#9472;&#9472; jsPDF.js                          &#9587;&#9472; jsPDF 2.5.1 UMD min (365 KB)
+&#9474;   &#9492;&#9472;&#9472; jsPDF.resource-meta.xml
+&#9492;&#9472;&#9472; settings/
+    &#9492;&#9472;&#9472; Quote.settings-meta.xml           &#9587;&#9472; enables the Quote object
+</div>
+
+<h2>8. Three Key Takeaways for the Team</h2>
+<ol>
+  <li><strong>"Without Visualforce, automated PDF generation moves to the browser."</strong> &mdash; modern, client-side, no server-side rendering dependency.</li>
+  <li><strong>"The trigger isn't an Apex trigger &mdash; it's a 3-second poll + 1.5-second debounce."</strong> &mdash; simple, predictable, and reliable across record types of changes.</li>
+  <li><strong>"<code>cacheable=false</code> + fresh-fetch on demand = correct PDF every time."</strong> &mdash; cacheable Apex was the cause of the early empty-PDF bug; the fix was deliberate and worth flagging.</li>
+</ol>
+
+<div class="footer">
+  Prepared for team review &mdash; URLA SHOES Salesforce Sandbox
+</div>
+
+</body>
+</html>

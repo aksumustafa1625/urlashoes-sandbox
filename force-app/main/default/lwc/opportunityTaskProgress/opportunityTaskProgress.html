@@ -1,0 +1,58 @@
+<template>
+    <lightning-card title={title} icon-name="standard:task">
+        <!-- Refresh button in the card header -->
+        <lightning-button-icon slot="actions" icon-name="utility:refresh" alternative-text="Refresh" title="Refresh" onclick={handleRefresh}></lightning-button-icon>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+            <!-- KPI cards row: total / completed / completion percentage -->
+            <div class="slds-grid slds-gutters slds-m-bottom_medium">
+                <div class="slds-col slds-size_1-of-3">
+                    <div class="kpi-card">
+                        <p class="kpi-label">Total Tasks</p>
+                        <p class="kpi-value">{totalTasks}</p>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-3">
+                    <div class="kpi-card">
+                        <p class="kpi-label">Completed</p>
+                        <p class="kpi-value">{totalCompleted}</p>
+                    </div>
+                </div>
+                <div class="slds-col slds-size_1-of-3">
+                    <div class="kpi-card">
+                        <p class="kpi-label">Completion</p>
+                        <p class="kpi-value">{overallPct}%</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Opportunities list with progress bars -->
+            <template lwc:if={hasData}>
+                <p class="slds-text-heading_small slds-m-bottom_x-small">Top Opportunities by Tasks</p>
+                <template for:each={opportunities} for:item="opp">
+                    <div key={opp.id} class="slds-m-bottom_small">
+                        <div class="slds-grid slds-grid_align-spread">
+                            <span class="slds-text-body_regular slds-truncate">{opp.name}</span>
+                            <span class="slds-text-body_small slds-text-color_weak">{opp.completed} / {opp.total}</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style={opp.barStyle}></div>
+                        </div>
+                    </div>
+                </template>
+            </template>
+
+            <!-- Empty state -->
+            <template lwc:else>
+                <p class="slds-text-align_center slds-text-color_weak slds-p-vertical_medium">No opportunities with tasks yet.</p>
+            </template>
+
+            <!-- Error state -->
+            <template lwc:if={error}>
+                <div class="slds-text-color_error slds-p-vertical_small">Error loading data.</div>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>
