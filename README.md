@@ -5,6 +5,14 @@
 > every decision behind them. The point of this repository is not scale — it is
 > that nothing in it is half-done.
 
+> **How this was built.**
+>
+> I used Claude to build this repository, the way an engineer today uses an IDE — I would rather say it first than have it asked. The model wrote code; I set the structure, and every decision went through me.
+>
+> So the question worth asking is not *whether* AI wrote it, but **who decided and who verified.** That record is in [`docs/adr/`](docs/adr/): **6 architecture decision records**, each naming the constraint, the choice, the alternatives rejected, and what rejecting them cost. A model does not turn down three options and price the fourth.
+>
+> **What this is not:** a demonstration, not a production system with real users. Built alone, so no colleague reviewed it. Every number is mine — please run them yourself.
+
 [![API version](https://img.shields.io/badge/API-66.0-orange)]()
 [![Trigger framework](https://img.shields.io/badge/trigger--framework-Kevin%20O%27Hara-blue)](https://github.com/kevinohara80/sfdc-trigger-framework)
 [![Tests](https://img.shields.io/badge/tests-37%20methods%20%C2%B7%207%20classes-brightgreen)]()
